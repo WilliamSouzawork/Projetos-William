@@ -64,6 +64,30 @@
 - RBAC granular / múltiplos perfis de acesso — uso é individual (gestor/direção), um dashboard único resolve
 - Indicadores por SKU/item de carga — granularidade de e-commerce/varejo não se aplica a cargas fechadas/fracionadas B2B
 
+## Traceability
+
+| Requirement | Fase | Status |
+|-------------|------|--------|
+| REQ-OP-01 | Fase 2 | Pendente |
+| REQ-OP-02 | Fase 2 | Pendente |
+| REQ-OP-03 | Fase 2 | Pendente |
+| REQ-OP-04 | Fase 2 | Pendente |
+| REQ-FR-01 | Fase 3 | Pendente |
+| REQ-FR-02 | Fase 3 | Pendente |
+| REQ-FR-03 | Fase 3 | Pendente |
+| REQ-FR-04 | Fase 3 | Pendente |
+| REQ-FR-05 | Fase 3 | Pendente |
+| REQ-FR-06 | Fase 3 | Pendente |
+| REQ-FIN-01 | Fase 4 | Pendente |
+| REQ-FIN-02 | Fase 4 | Pendente |
+| REQ-FIN-03 | Fase 4 | Pendente |
+| REQ-FIN-04 | Fase 4 | Pendente |
+| REQ-FIN-05 | Fase 4 | Pendente |
+| REQ-SEG-01 | Fase 5 | Pendente |
+| REQ-SEG-02 | Fase 5 | Pendente |
+| REQ-SEG-03 | Fase 5 | Pendente |
+| REQ-SEG-04 | Fase 5 | Pendente |
+
 ## Validação contra o core value
 
 Core value (PROJECT.md): dar visibilidade consolidada da operação — hoje fragmentada em planilhas — através de indicadores confiáveis que suportam decisões de gestão.
