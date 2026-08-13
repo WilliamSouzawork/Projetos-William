@@ -9,9 +9,9 @@
 ## Current Position
 
 - **Phase:** 1 - Fundação de Dados
-- **Plan:** 01-01-PLAN.md criado (3 tasks: planilha modelo, guia Power BI, validação humana)
-- **Status:** Pronto para `/gsd:execute-phase 1`
-- **Progress:** `[__________]` 0/6 fases concluídas
+- **Plan:** 01-01-PLAN.md — Tasks 1 e 2 concluídas (planilha modelo + guia Power BI). Task 3 (checkpoint:human-action) aguardando o usuário.
+- **Status:** Bloqueado em checkpoint humano — usuário precisa montar o modelo no Power BI Desktop seguindo `dashboard/GUIA-POWERBI-FASE1.md`
+- **Progress:** `[__________]` 0/6 fases concluídas (Fase 1 em andamento: 2/3 tasks)
 
 ## Performance Metrics
 
@@ -40,4 +40,4 @@
 
 ## Session Continuity
 
-Próximo passo: `/gsd:execute-phase 1` para executar o plano da Fase 1 (Fundação de Dados). A Task 3 do plano é `checkpoint:human-action` — exige que o usuário monte o modelo no Power BI Desktop manualmente, já que Claude não tem acesso a essa aplicação gráfica.
+Próximo passo: usuário abre `dashboard/dados/planilha-modelo-transportadora.xlsx` e `dashboard/GUIA-POWERBI-FASE1.md` no Power BI Desktop, monta o modelo estrela e confirma. Depois disso, a Fase 1 está completa e o próximo comando é `/gsd:plan-phase 2` (Indicadores Operacionais).
