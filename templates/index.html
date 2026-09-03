@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Calculadora de Distância de Rotas</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 560px; margin: 40px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 22px; }
+    fieldset { border: 1px solid #ccc; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    legend { font-weight: bold; padding: 0 6px; }
+    label { display: block; margin-top: 10px; font-size: 14px; }
+    input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; font-size: 14px; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 15px; cursor: pointer; }
+    .erro { background: #ffe6e6; border: 1px solid #cc0000; padding: 12px; border-radius: 6px; margin-bottom: 16px; }
+    .aviso { background: #fff8e1; border: 1px solid #cc9900; padding: 10px; border-radius: 6px; margin-bottom: 10px; }
+    .resultado { background: #e8f5e9; border: 1px solid #2e7d32; padding: 16px; border-radius: 8px; }
+    .resultado dt { font-weight: bold; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Calculadora de Distância de Rotas</h1>
+  <p>Informe a origem e o destino por latitude e longitude para calcular a distância pela estrada.</p>
+
+  {% if erro %}
+    <div class="erro">{{ erro }}</div>
+  {% endif %}
+
+  {% if avisos %}
+    {% for aviso in avisos %}
+      <div class="aviso">{{ aviso }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" action="/calcular">
+    <fieldset>
+      <legend>Origem</legend>
+      <label>Latitude
+        <input type="text" name="origem_lat" placeholder="-19,8449028" value="{{ resultado.origem_lat if resultado else '' }}" required>
+      </label>
+      <label>Longitude
+        <input type="text" name="origem_lon" placeholder="-44,0754105" value="{{ resultado.origem_lon if resultado else '' }}" required>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Destino</legend>
+      <label>Latitude
+        <input type="text" name="destino_lat" placeholder="-19,9000000" value="{{ resultado.destino_lat if resultado else '' }}" required>
+      </label>
+      <label>Longitude
+        <input type="text" name="destino_lon" placeholder="-44,1000000" value="{{ resultado.destino_lon if resultado else '' }}" required>
+      </label>
+    </fieldset>
+
+    <button type="submit">Calcular distância</button>
+  </form>
+
+  {% if resultado %}
+    <div class="resultado">
+      <dl>
+        <dt>Distância pela rota</dt>
+        <dd>{{ resultado.distancia_rota_km }} km</dd>
+        <dt>Distância em linha reta</dt>
+        <dd>{{ resultado.distancia_linha_reta_km }} km</dd>
+        <dt>Tempo estimado</dt>
+        <dd>{{ resultado.tempo_estimado }}</dd>
+        <dt>Status</dt>
+        <dd>Rota calculada com sucesso</dd>
+      </dl>
+    </div>
+  {% endif %}
+</body>
+</html>
