@@ -61,30 +61,26 @@ function calcularTodasAsLinhas() {
   var ultimaOrigemLat = NaN;
   var ultimaOrigemLon = NaN;
 
-  for (var linha = 2; linha <= ultimaLinha; linha++) {
-    var statusAtual = planilha.getRange(linha, COL_STATUS).getValue();
-    if (statusAtual === 'OK') {
-      // Ainda assim atualiza a "última origem" para as linhas seguintes,
-      // caso essa linha tenha uma origem preenchida.
-      var olat = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LAT).getValue());
-      var olon = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LON).getValue());
-      if (!isNaN(olat) && !isNaN(olon)) {
-        ultimaOrigemLat = olat;
-        ultimaOrigemLon = olon;
-      }
-      continue; // já calculado antes — evita gastar a cota gratuita de novo
-    }
+  // Agrupa as linhas por origem, para poder gerar depois um único link de
+  // mapa por grupo — com a origem e TODOS os destinos daquele grupo juntos,
+  // em vez de um link separado (só com 2 pontos) para cada linha.
+  var grupoAtual = null;
+  var grupos = [];
 
+  for (var linha = 2; linha <= ultimaLinha; linha++) {
     var origemLatCelula = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LAT).getValue());
     var origemLonCelula = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LON).getValue());
 
     var origemLat, origemLon;
     if (!isNaN(origemLatCelula) && !isNaN(origemLonCelula)) {
-      // Origem preenchida nesta linha: passa a valer para esta e as próximas.
+      // Origem preenchida nesta linha: começa um novo grupo, que passa a
+      // valer para esta e as próximas linhas com origem em branco.
       origemLat = origemLatCelula;
       origemLon = origemLonCelula;
       ultimaOrigemLat = origemLat;
       ultimaOrigemLon = origemLon;
+      grupoAtual = { origemLat: origemLat, origemLon: origemLon, membros: [] };
+      grupos.push(grupoAtual);
     } else {
       // Origem em branco: reaproveita a última origem preenchida acima.
       origemLat = ultimaOrigemLat;
@@ -107,6 +103,18 @@ function calcularTodasAsLinhas() {
     if (!coordenadaValida(origemLat, origemLon) || !coordenadaValida(destinoLat, destinoLon)) {
       planilha.getRange(linha, COL_STATUS).setValue('Erro: latitude/longitude fora do intervalo permitido (lat -90..90, lon -180..180)');
       continue;
+    }
+
+    // Origem e destino válidos: entra no grupo do link de mapa, mesmo que a
+    // consulta à API abaixo já tenha sido feita antes (linha já com "OK") ou
+    // venha a falhar — o ponto em si ainda vale a pena aparecer no mapa.
+    if (grupoAtual) {
+      grupoAtual.membros.push({ linha: linha, destinoLat: destinoLat, destinoLon: destinoLon });
+    }
+
+    var statusAtual = planilha.getRange(linha, COL_STATUS).getValue();
+    if (statusAtual === 'OK') {
+      continue; // já calculado antes — evita gastar a cota gratuita de novo
     }
 
     var avisoFora = '';
@@ -132,11 +140,24 @@ function calcularTodasAsLinhas() {
     planilha.getRange(linha, COL_SUBIDA).setValue(resultado.subidaM != null ? Math.round(resultado.subidaM) : 'não disponível');
     planilha.getRange(linha, COL_DESCIDA).setValue(resultado.descidaM != null ? Math.round(resultado.descidaM) : 'não disponível');
     planilha.getRange(linha, COL_STATUS).setValue('OK' + avisoFora + avisoRazao);
-    planilha.getRange(linha, COL_MAPA).setValue(linkGoogleMaps(origemLat, origemLon, destinoLat, destinoLon));
 
     // Respeita o limite de requisições por minuto do plano gratuito do ORS.
     Utilities.sleep(1500);
   }
+
+  // Agora que sabemos todos os destinos de cada grupo, gera um único link de
+  // mapa por grupo (origem + todos os destinos) e grava na coluna "Ver no
+  // Mapa" de cada linha que pertence a esse grupo.
+  grupos.forEach(function(grupo) {
+    if (grupo.membros.length === 0) return;
+    var destinos = grupo.membros.map(function(m) {
+      return { lat: m.destinoLat, lon: m.destinoLon };
+    });
+    var link = linkGoogleMapsMultiplo(grupo.origemLat, grupo.origemLon, destinos);
+    grupo.membros.forEach(function(m) {
+      planilha.getRange(m.linha, COL_MAPA).setValue(link);
+    });
+  });
 
   SpreadsheetApp.getUi().alert('Cálculo concluído.');
 }
@@ -201,12 +222,29 @@ function consultarRota(chave, origemLat, origemLon, destinoLat, destinoLon) {
   };
 }
 
-function linkGoogleMaps(origemLat, origemLon, destinoLat, destinoLon) {
-  // Link público do Google Maps, sem precisar de chave de API — abre a rota
-  // calculada pelo Google entre os dois pontos (útil para conferência visual;
-  // pode não ser idêntica à rota calculada pelo OpenRouteService).
-  return 'https://www.google.com/maps/dir/?api=1&origin=' + origemLat + ',' + origemLon +
-    '&destination=' + destinoLat + ',' + destinoLon + '&travelmode=driving';
+function linkGoogleMapsMultiplo(origemLat, origemLon, destinos) {
+  // Link público do Google Maps, sem precisar de chave de API — abre a
+  // origem e todos os destinos do grupo juntos no mapa (útil para
+  // conferência visual; pode não ser idêntica à rota calculada pelo
+  // OpenRouteService, que é quem gera os números de distância/tempo).
+  //
+  // O Google Maps aceita no máximo 25 pontos numa mesma URL (origem +
+  // destino final + até 23 paradas no meio). Se houver mais destinos que
+  // isso, usamos só os 24 primeiros para não gerar um link quebrado.
+  var limitados = destinos.slice(0, 24);
+  var ultimo = limitados[limitados.length - 1];
+  var paradas = limitados.slice(0, -1);
+
+  var url = 'https://www.google.com/maps/dir/?api=1' +
+    '&origin=' + origemLat + ',' + origemLon +
+    '&destination=' + ultimo.lat + ',' + ultimo.lon;
+
+  if (paradas.length > 0) {
+    var pontos = paradas.map(function(p) { return p.lat + ',' + p.lon; }).join('|');
+    url += '&waypoints=' + encodeURIComponent(pontos);
+  }
+
+  return url + '&travelmode=driving';
 }
 
 function parseCoordenada(valor) {

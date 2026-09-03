@@ -69,17 +69,23 @@ novo.
 - **Subida (m)** — soma de toda a subida ao longo da rota (ganho de elevação total).
 - **Descida (m)** — soma de toda a descida ao longo da rota.
 - **Status** — `OK` quando deu certo (com avisos ao lado se alguma coordenada parecer suspeita), ou uma mensagem de erro explicando o que aconteceu.
-- **Ver no Mapa** — link que abre o Google Maps com a rota entre a origem e o destino daquela linha. Clique direto na célula.
+- **Ver no Mapa** — link que abre o Google Maps mostrando a origem e **todos
+  os destinos daquele grupo/rota juntos** (não só o destino daquela linha
+  específica). Todas as linhas de uma mesma rota levam ao mesmo link. Clique
+  direto na célula.
 
 Nem toda rota retorna subida/descida (depende do trecho) — quando isso
 acontece, a célula mostra "não disponível" em vez de dar erro.
 
-⚠️ O link do "Ver no Mapa" abre a rota calculada pelo **Google Maps**, não a
-mesma rota que o OpenRouteService calculou para preencher as outras colunas
-— são dois serviços diferentes (como expliquei lá no início do projeto, isso
-é normal e pode gerar pequenas diferenças). Use o link para conferir
-visualmente se origem e destino fazem sentido, não para comparar o número
-exato de km.
+⚠️ O link do "Ver no Mapa" mostra o trajeto calculado pelo **Google Maps**
+passando pelos pontos na ordem em que aparecem na planilha — não é a mesma
+rota que o OpenRouteService calculou para preencher as outras colunas (são
+dois serviços diferentes, como expliquei lá no início do projeto) e também
+não representa "a melhor sequência de visita" — é só uma forma prática de
+ver todos os pontos no mapa de uma vez. Use para conferir visualmente se as
+coordenadas fazem sentido, não para comparar o número exato de km.
+(Limite: até 24 destinos por grupo, por causa de uma restrição do próprio
+Google Maps — mais que isso raramente acontece no uso manual.)
 
 ## Rodar de novo
 
