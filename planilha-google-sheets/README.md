@@ -9,9 +9,9 @@ Nada para instalar. Tudo roda dentro do Google Sheets, no navegador.
 2. Clique em **Planilha em branco**.
 3. Na primeira linha (linha 1), digite estes títulos, uma coluna por célula:
 
-   | A | B | C | D | E | F | G | H |
-   |---|---|---|---|---|---|---|---|
-   | Origem Lat | Origem Lon | Destino Lat | Destino Lon | Distância Rota (km) | Distância Linha Reta (km) | Tempo Estimado | Status |
+   | A | B | C | D | E | F | G | H | I | J |
+   |---|---|---|---|---|---|---|---|---|---|
+   | Origem Lat | Origem Lon | Destino Lat | Destino Lon | Distância Rota (km) | Distância Linha Reta (km) | Tempo Estimado | Subida (m) | Descida (m) | Status |
 
 4. Nas linhas seguintes (2, 3, 4...), preencha as coordenadas de origem e destino que você quer calcular.
 
@@ -62,7 +62,12 @@ origem, até você trocar outra vez.
 - **Distância Rota (km)** — distância real pela estrada.
 - **Distância Linha Reta (km)** — distância "em régua", para comparação.
 - **Tempo Estimado** — tempo estimado de viagem.
+- **Subida (m)** — soma de toda a subida ao longo da rota (ganho de elevação total).
+- **Descida (m)** — soma de toda a descida ao longo da rota.
 - **Status** — `OK` quando deu certo (com avisos ao lado se alguma coordenada parecer suspeita), ou uma mensagem de erro explicando o que aconteceu.
+
+Nem toda rota retorna subida/descida (depende do trecho) — quando isso
+acontece, a célula mostra "não disponível" em vez de dar erro.
 
 ## Rodar de novo
 

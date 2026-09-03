@@ -15,7 +15,9 @@ var COL_DESTINO_LON = 4;  // D
 var COL_DISTANCIA_ROTA = 5;    // E
 var COL_DISTANCIA_LINHA_RETA = 6; // F
 var COL_TEMPO_ESTIMADO = 7;    // G
-var COL_STATUS = 8;            // H
+var COL_SUBIDA = 8;            // H
+var COL_DESCIDA = 9;           // I
+var COL_STATUS = 10;           // J
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -125,6 +127,8 @@ function calcularTodasAsLinhas() {
     planilha.getRange(linha, COL_DISTANCIA_ROTA).setValue(Math.round(resultado.distanciaKm * 10) / 10);
     planilha.getRange(linha, COL_DISTANCIA_LINHA_RETA).setValue(Math.round(linhaReta * 10) / 10);
     planilha.getRange(linha, COL_TEMPO_ESTIMADO).setValue(formatarTempo(resultado.duracaoSeg));
+    planilha.getRange(linha, COL_SUBIDA).setValue(resultado.subidaM != null ? Math.round(resultado.subidaM) : 'não disponível');
+    planilha.getRange(linha, COL_DESCIDA).setValue(resultado.descidaM != null ? Math.round(resultado.descidaM) : 'não disponível');
     planilha.getRange(linha, COL_STATUS).setValue('OK' + avisoFora + avisoRazao);
 
     // Respeita o limite de requisições por minuto do plano gratuito do ORS.
@@ -139,7 +143,8 @@ function consultarRota(chave, origemLat, origemLon, destinoLat, destinoLon) {
     coordinates: [
       [origemLon, origemLat],
       [destinoLon, destinoLat]
-    ]
+    ],
+    elevation: true
   };
 
   var opcoes = {
@@ -183,7 +188,14 @@ function consultarRota(chave, origemLat, origemLon, destinoLat, destinoLon) {
     return { erro: 'formato de resposta inesperado' };
   }
 
-  return { distanciaKm: resumo.distance / 1000, duracaoSeg: resumo.duration };
+  return {
+    distanciaKm: resumo.distance / 1000,
+    duracaoSeg: resumo.duration,
+    // Nem sempre o serviço devolve subida/descida (depende da rota) —
+    // por isso tratamos como "não disponível" em vez de dar erro.
+    subidaM: (typeof resumo.ascent === 'number') ? resumo.ascent : null,
+    descidaM: (typeof resumo.descent === 'number') ? resumo.descent : null
+  };
 }
 
 function parseCoordenada(valor) {
