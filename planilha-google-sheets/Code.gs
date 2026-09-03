@@ -19,6 +19,7 @@ var COL_TEMPO_ESTIMADO = 8;    // H
 var COL_SUBIDA = 9;            // I
 var COL_DESCIDA = 10;          // J
 var COL_STATUS = 11;           // K
+var COL_MAPA = 12;             // L
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -131,6 +132,7 @@ function calcularTodasAsLinhas() {
     planilha.getRange(linha, COL_SUBIDA).setValue(resultado.subidaM != null ? Math.round(resultado.subidaM) : 'não disponível');
     planilha.getRange(linha, COL_DESCIDA).setValue(resultado.descidaM != null ? Math.round(resultado.descidaM) : 'não disponível');
     planilha.getRange(linha, COL_STATUS).setValue('OK' + avisoFora + avisoRazao);
+    planilha.getRange(linha, COL_MAPA).setValue(linkGoogleMaps(origemLat, origemLon, destinoLat, destinoLon));
 
     // Respeita o limite de requisições por minuto do plano gratuito do ORS.
     Utilities.sleep(1500);
@@ -197,6 +199,14 @@ function consultarRota(chave, origemLat, origemLon, destinoLat, destinoLon) {
     subidaM: (typeof resumo.ascent === 'number') ? resumo.ascent : null,
     descidaM: (typeof resumo.descent === 'number') ? resumo.descent : null
   };
+}
+
+function linkGoogleMaps(origemLat, origemLon, destinoLat, destinoLon) {
+  // Link público do Google Maps, sem precisar de chave de API — abre a rota
+  // calculada pelo Google entre os dois pontos (útil para conferência visual;
+  // pode não ser idêntica à rota calculada pelo OpenRouteService).
+  return 'https://www.google.com/maps/dir/?api=1&origin=' + origemLat + ',' + origemLon +
+    '&destination=' + destinoLat + ',' + destinoLon + '&travelmode=driving';
 }
 
 function parseCoordenada(valor) {
