@@ -20,6 +20,11 @@ var COL_SUBIDA = 9;            // I
 var COL_DESCIDA = 10;          // J
 var COL_STATUS = 11;           // K
 var COL_MAPA = 12;             // L
+var COL_DIST_TOTAL_ROTA = 13;        // M
+var COL_DIST_TOTAL_LINHA_RETA = 14;  // N
+var COL_TEMPO_TOTAL = 15;            // O
+var COL_SUBIDA_TOTAL = 16;           // P
+var COL_DESCIDA_TOTAL = 17;          // Q
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -159,7 +164,10 @@ function calcularTodasAsLinhas() {
       }
 
       var linhaReta = distanciaLinhaRetaKm(origemLat, origemLon, destinoLat, destinoLon);
-      var resultado = consultarRota(chave, origemLat, origemLon, destinoLat, destinoLon);
+      var resultado = consultarRota(chave, [
+        { lat: origemLat, lon: origemLon },
+        { lat: destinoLat, lon: destinoLon }
+      ]);
 
       if (resultado.erro) {
         planilha.getRange(linha, COL_STATUS).setValue('Erro: ' + resultado.erro);
@@ -188,18 +196,82 @@ function calcularTodasAsLinhas() {
       membrosMapa.forEach(function(m) {
         planilha.getRange(m.linha, COL_MAPA).setValue(link);
       });
+
+      calcularTotalDoGrupo(planilha, chave, origemGrupo, membrosMapa);
     }
   });
 
   SpreadsheetApp.getUi().alert('Cálculo concluído.');
 }
 
-function consultarRota(chave, origemLat, origemLon, destinoLat, destinoLon) {
+function calcularTotalDoGrupo(planilha, chave, origemGrupo, membrosMapa) {
+  // Calcula o trajeto único da rota inteira: origem -> destino 1 -> destino 2
+  // -> ... -> destino N, na ordem em que os destinos aparecem na planilha
+  // (não é a melhor sequência possível, é a ordem que o usuário digitou).
+  var primeiraLinha = membrosMapa[0].linha;
+
+  var jaCalculado = membrosMapa.length > 1 &&
+    !isNaN(parseFloat(planilha.getRange(primeiraLinha, COL_DIST_TOTAL_ROTA).getValue())) &&
+    membrosMapa.every(function(m) {
+      return String(planilha.getRange(m.linha, COL_STATUS).getValue()).indexOf('OK') === 0;
+    });
+  if (jaCalculado) {
+    return; // total já calculado numa execução anterior e nada mudou — evita gastar cota à toa
+  }
+
+  if (membrosMapa.length === 1) {
+    // Uma rota com um único destino: o "total" é a própria perna, sem custo
+    // extra de API — só copiamos o que já foi calculado para essa linha.
+    var m = membrosMapa[0];
+    planilha.getRange(m.linha, COL_DIST_TOTAL_ROTA).setValue(planilha.getRange(m.linha, COL_DISTANCIA_ROTA).getValue());
+    planilha.getRange(m.linha, COL_DIST_TOTAL_LINHA_RETA).setValue(planilha.getRange(m.linha, COL_DISTANCIA_LINHA_RETA).getValue());
+    planilha.getRange(m.linha, COL_TEMPO_TOTAL).setValue(planilha.getRange(m.linha, COL_TEMPO_ESTIMADO).getValue());
+    planilha.getRange(m.linha, COL_SUBIDA_TOTAL).setValue(planilha.getRange(m.linha, COL_SUBIDA).getValue());
+    planilha.getRange(m.linha, COL_DESCIDA_TOTAL).setValue(planilha.getRange(m.linha, COL_DESCIDA).getValue());
+    return;
+  }
+
+  var pontosGrupo = [{ lat: origemGrupo.lat, lon: origemGrupo.lon }].concat(
+    membrosMapa.map(function(m) { return { lat: m.destinoLat, lon: m.destinoLon }; })
+  );
+
+  var linhaRetaTotal = 0;
+  for (var i = 0; i < pontosGrupo.length - 1; i++) {
+    linhaRetaTotal += distanciaLinhaRetaKm(
+      pontosGrupo[i].lat, pontosGrupo[i].lon,
+      pontosGrupo[i + 1].lat, pontosGrupo[i + 1].lon
+    );
+  }
+
+  var resultado = consultarRota(chave, pontosGrupo);
+  Utilities.sleep(1500);
+
+  var valorErro = resultado.erro ? ('Erro: ' + resultado.erro) : '';
+
+  membrosMapa.forEach(function(m) {
+    if (resultado.erro) {
+      planilha.getRange(m.linha, COL_DIST_TOTAL_ROTA).setValue(valorErro);
+      planilha.getRange(m.linha, COL_DIST_TOTAL_LINHA_RETA).setValue('');
+      planilha.getRange(m.linha, COL_TEMPO_TOTAL).setValue('');
+      planilha.getRange(m.linha, COL_SUBIDA_TOTAL).setValue('');
+      planilha.getRange(m.linha, COL_DESCIDA_TOTAL).setValue('');
+      return;
+    }
+    planilha.getRange(m.linha, COL_DIST_TOTAL_ROTA).setValue(Math.round(resultado.distanciaKm * 10) / 10);
+    planilha.getRange(m.linha, COL_DIST_TOTAL_LINHA_RETA).setValue(Math.round(linhaRetaTotal * 10) / 10);
+    planilha.getRange(m.linha, COL_TEMPO_TOTAL).setValue(formatarTempo(resultado.duracaoSeg));
+    planilha.getRange(m.linha, COL_SUBIDA_TOTAL).setValue(resultado.subidaM != null ? Math.round(resultado.subidaM) : 'não disponível');
+    planilha.getRange(m.linha, COL_DESCIDA_TOTAL).setValue(resultado.descidaM != null ? Math.round(resultado.descidaM) : 'não disponível');
+  });
+}
+
+function consultarRota(chave, pontos) {
+  // pontos: lista de {lat, lon}, na ordem em que devem ser visitados.
+  // Com 2 pontos, é uma perna simples (origem -> 1 destino). Com mais de 2,
+  // o próprio OpenRouteService calcula o trajeto único passando por todos,
+  // na ordem informada — não precisamos somar pernas manualmente.
   var corpo = {
-    coordinates: [
-      [origemLon, origemLat],
-      [destinoLon, destinoLat]
-    ],
+    coordinates: pontos.map(function(p) { return [p.lon, p.lat]; }),
     elevation: true
   };
 

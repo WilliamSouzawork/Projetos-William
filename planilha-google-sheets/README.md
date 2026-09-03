@@ -9,9 +9,9 @@ Nada para instalar. Tudo roda dentro do Google Sheets, no navegador.
 2. Clique em **Planilha em branco**.
 3. Na primeira linha (linha 1), digite estes títulos, uma coluna por célula:
 
-   | A | B | C | D | E | F | G | H | I | J | K | L |
-   |---|---|---|---|---|---|---|---|---|---|---|---|
-   | Rota | Origem Lat | Origem Lon | Destino Lat | Destino Lon | Distância Rota (km) | Distância Linha Reta (km) | Tempo Estimado | Subida (m) | Descida (m) | Status | Ver no Mapa |
+   | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | Q |
+   |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+   | Rota | Origem Lat | Origem Lon | Destino Lat | Destino Lon | Distância Rota (km) | Distância Linha Reta (km) | Tempo Estimado | Subida (m) | Descida (m) | Status | Ver no Mapa | Distância Total Rota (km) | Distância Total Linha Reta (km) | Tempo Total Estimado | Subida Total (m) | Descida Total (m) |
 
 4. Nas linhas seguintes (2, 3, 4...), preencha as coordenadas de origem e destino que você quer calcular. A coluna **Rota** é o que define o agrupamento: todas as linhas com o mesmo texto nessa coluna (ex.: "Rota 1") são tratadas como a mesma rota.
 
@@ -30,9 +30,19 @@ funcionam. Exemplo com dois grupos:
    | Rota 2 | -22,9068 | -43,1729 | -23,5505 | -46,6333 |
    | Rota 2 |  |  | -22,0000 | -43,5000 |
 
-Isso calcula, para cada grupo, a distância de **cada destino separadamente a
-partir da mesma origem** (A→B, A→C) — não é a rota que passa por todos em
-sequência (essa é outra funcionalidade, para uma fase futura).
+As colunas F a J (Distância Rota, Distância Linha Reta, Tempo, Subida,
+Descida) mostram sempre a perna individual **daquela linha** (A→B, A→C,
+A→D, cada uma separada). Já as colunas M a Q (Distância Total Rota, etc.)
+mostram o **trajeto único da rota inteira**: origem → destino 1 → destino 2
+→ ... → destino N, na ordem em que os destinos aparecem na planilha,
+calculado pelo OpenRouteService como uma única viagem contínua — como se
+alguém saísse da origem e visitasse os destinos naquela sequência, sem
+voltar à origem entre um e outro. É o mesmo valor repetido em todas as
+linhas do grupo, já que se trata do total da rota, não de cada perna.
+
+Se a rota tiver só 1 destino, as colunas de total ficam iguais às da perna
+(não faz sentido gastar outra consulta à API só para repetir o mesmo
+número).
 
 **Importante:** dentro de um mesmo grupo (mesmo texto na coluna Rota), todas
 as linhas precisam ter a mesma origem. Se você preencher origens diferentes
@@ -64,15 +74,23 @@ grupo individual (não são agrupadas com outras linhas em branco).
 ### 5. Calcule
 1. Clique em **Calculadora de Rotas** → **Calcular todas as linhas**.
 2. Aguarde — o script consulta uma linha por vez (com uma pequena pausa entre cada uma, para respeitar o limite gratuito do serviço).
-3. As colunas de resultado (F a L) vão sendo preenchidas automaticamente.
+3. As colunas de resultado (F a Q) vão sendo preenchidas automaticamente.
 
 ## O que aparece nos resultados
 
-- **Distância Rota (km)** — distância real pela estrada.
-- **Distância Linha Reta (km)** — distância "em régua", para comparação.
-- **Tempo Estimado** — tempo estimado de viagem.
-- **Subida (m)** — soma de toda a subida ao longo da rota (ganho de elevação total).
-- **Descida (m)** — soma de toda a descida ao longo da rota.
+**Por perna (cada linha, separadamente):**
+- **Distância Rota (km)** — distância real pela estrada daquele trecho.
+- **Distância Linha Reta (km)** — distância "em régua" daquele trecho, para comparação.
+- **Tempo Estimado** — tempo estimado daquele trecho.
+- **Subida (m)** / **Descida (m)** — ganho/perda de elevação daquele trecho.
+
+**Da rota inteira (mesmo valor em todas as linhas do grupo):**
+- **Distância Total Rota (km)** — distância pela estrada do trajeto único passando por todos os destinos do grupo, na ordem da planilha.
+- **Distância Total Linha Reta (km)** — soma das distâncias em linha reta entre um ponto e o próximo, na mesma ordem.
+- **Tempo Total Estimado** — tempo estimado da viagem inteira.
+- **Subida Total (m)** / **Descida Total (m)** — ganho/perda de elevação da viagem inteira.
+
+**Comuns:**
 - **Status** — `OK` quando deu certo (com avisos ao lado se alguma coordenada parecer suspeita), ou uma mensagem de erro explicando o que aconteceu.
 - **Ver no Mapa** — link que abre o Google Maps mostrando a origem e **todos
   os destinos daquele grupo/rota juntos** (não só o destino daquela linha
