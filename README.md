@@ -1,13 +1,22 @@
 # Projetos-William
 Projetos do Claude
 
-## Calculadora de Distância de Rotas — Fase 1
+## Calculadora de Distância de Rotas
 
-Aplicativo web simples que calcula a distância pela estrada entre uma origem
-e um destino informados por latitude/longitude, usando a API gratuita do
-[OpenRouteService](https://openrouteservice.org).
+Duas versões da Fase 1, calculando distância pela estrada (não linha reta)
+entre origem e destino informados por latitude/longitude, usando a API
+gratuita do [OpenRouteService](https://openrouteservice.org).
 
-### Como rodar no seu computador
+### Versão ativa: Google Planilhas (sem instalar nada)
+
+Veja o passo a passo completo em [`planilha-google-sheets/README.md`](planilha-google-sheets/README.md).
+Você preenche as coordenadas direto numa planilha do Google e clica num
+botão do menu para calcular tudo — funciona só no navegador.
+
+### Versão alternativa: aplicativo web local (Python)
+
+Fica guardada para quando fizer sentido rodar isso como um site de verdade
+(fases mais avançadas do projeto). Exige instalar Python.
 
 1. Instale o [Python](https://www.python.org/downloads/) (versão 3.9 ou mais recente).
 2. Baixe/clone este repositório no seu computador.
