@@ -8,16 +8,17 @@ var PROPRIEDADE_CHAVE_API = 'ORS_API_KEY';
 var BRASIL_LAT_MIN = -34.0, BRASIL_LAT_MAX = 5.5;
 var BRASIL_LON_MIN = -74.0, BRASIL_LON_MAX = -32.0;
 
-var COL_ORIGEM_LAT = 1;   // A
-var COL_ORIGEM_LON = 2;   // B
-var COL_DESTINO_LAT = 3;  // C
-var COL_DESTINO_LON = 4;  // D
-var COL_DISTANCIA_ROTA = 5;    // E
-var COL_DISTANCIA_LINHA_RETA = 6; // F
-var COL_TEMPO_ESTIMADO = 7;    // G
-var COL_SUBIDA = 8;            // H
-var COL_DESCIDA = 9;           // I
-var COL_STATUS = 10;           // J
+var COL_ROTA = 1;         // A (etiqueta livre, ex: "Rota 1" — só para leitura, não afeta o cálculo)
+var COL_ORIGEM_LAT = 2;   // B
+var COL_ORIGEM_LON = 3;   // C
+var COL_DESTINO_LAT = 4;  // D
+var COL_DESTINO_LON = 5;  // E
+var COL_DISTANCIA_ROTA = 6;    // F
+var COL_DISTANCIA_LINHA_RETA = 7; // G
+var COL_TEMPO_ESTIMADO = 8;    // H
+var COL_SUBIDA = 9;            // I
+var COL_DESCIDA = 10;          // J
+var COL_STATUS = 11;           // K
 
 function onOpen() {
   SpreadsheetApp.getUi()
