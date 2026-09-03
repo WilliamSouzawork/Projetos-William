@@ -55,34 +55,25 @@ function calcularTodasAsLinhas() {
   var planilha = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var ultimaLinha = planilha.getLastRow();
 
-  // Guarda a última origem preenchida, para permitir "uma origem, vários
-  // destinos": basta deixar as células de origem em branco nas linhas
-  // seguintes que elas reaproveitam a origem informada na linha anterior.
+  // --- Passo 1: ler todas as linhas e resolver a origem de cada uma ---
+  // Se a célula de origem estiver em branco, reaproveita a última origem
+  // preenchida acima (permite "uma origem, vários destinos" sem repetir).
   var ultimaOrigemLat = NaN;
   var ultimaOrigemLon = NaN;
-
-  // Agrupa as linhas por origem, para poder gerar depois um único link de
-  // mapa por grupo — com a origem e TODOS os destinos daquele grupo juntos,
-  // em vez de um link separado (só com 2 pontos) para cada linha.
-  var grupoAtual = null;
-  var grupos = [];
+  var infoLinhas = [];
 
   for (var linha = 2; linha <= ultimaLinha; linha++) {
+    var rotaLabel = String(planilha.getRange(linha, COL_ROTA).getValue()).trim();
     var origemLatCelula = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LAT).getValue());
     var origemLonCelula = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LON).getValue());
 
     var origemLat, origemLon;
     if (!isNaN(origemLatCelula) && !isNaN(origemLonCelula)) {
-      // Origem preenchida nesta linha: começa um novo grupo, que passa a
-      // valer para esta e as próximas linhas com origem em branco.
       origemLat = origemLatCelula;
       origemLon = origemLonCelula;
       ultimaOrigemLat = origemLat;
       ultimaOrigemLon = origemLon;
-      grupoAtual = { origemLat: origemLat, origemLon: origemLon, membros: [] };
-      grupos.push(grupoAtual);
     } else {
-      // Origem em branco: reaproveita a última origem preenchida acima.
       origemLat = ultimaOrigemLat;
       origemLon = ultimaOrigemLon;
     }
@@ -90,73 +81,114 @@ function calcularTodasAsLinhas() {
     var destinoLat = parseCoordenada(planilha.getRange(linha, COL_DESTINO_LAT).getValue());
     var destinoLon = parseCoordenada(planilha.getRange(linha, COL_DESTINO_LON).getValue());
 
-    if (isNaN(destinoLat) || isNaN(destinoLon)) {
-      // Linha sem destino preenchido — ignora silenciosamente (pode ser linha em branco no fim da planilha).
-      continue;
-    }
-
-    if (isNaN(origemLat) || isNaN(origemLon)) {
-      planilha.getRange(linha, COL_STATUS).setValue('Erro: nenhuma origem informada (preencha a origem nesta linha ou em uma linha anterior)');
-      continue;
-    }
-
-    if (!coordenadaValida(origemLat, origemLon) || !coordenadaValida(destinoLat, destinoLon)) {
-      planilha.getRange(linha, COL_STATUS).setValue('Erro: latitude/longitude fora do intervalo permitido (lat -90..90, lon -180..180)');
-      continue;
-    }
-
-    // Origem e destino válidos: entra no grupo do link de mapa, mesmo que a
-    // consulta à API abaixo já tenha sido feita antes (linha já com "OK") ou
-    // venha a falhar — o ponto em si ainda vale a pena aparecer no mapa.
-    if (grupoAtual) {
-      grupoAtual.membros.push({ linha: linha, destinoLat: destinoLat, destinoLon: destinoLon });
-    }
-
-    var statusAtual = planilha.getRange(linha, COL_STATUS).getValue();
-    if (statusAtual === 'OK') {
-      continue; // já calculado antes — evita gastar a cota gratuita de novo
-    }
-
-    var avisoFora = '';
-    if (!dentroDoBrasil(origemLat, origemLon) || !dentroDoBrasil(destinoLat, destinoLon)) {
-      avisoFora = ' — aviso: coordenada fora do Brasil, confira se lat/lon não foram invertidas';
-    }
-
-    var linhaReta = distanciaLinhaRetaKm(origemLat, origemLon, destinoLat, destinoLon);
-
-    var resultado = consultarRota(chave, origemLat, origemLon, destinoLat, destinoLon);
-
-    if (resultado.erro) {
-      planilha.getRange(linha, COL_STATUS).setValue('Erro: ' + resultado.erro);
-      continue;
-    }
-
-    var razao = linhaReta > 0 ? resultado.distanciaKm / linhaReta : 0;
-    var avisoRazao = razao > 3 ? ' — aviso: rota muito maior que linha reta, revise as coordenadas' : '';
-
-    planilha.getRange(linha, COL_DISTANCIA_ROTA).setValue(Math.round(resultado.distanciaKm * 10) / 10);
-    planilha.getRange(linha, COL_DISTANCIA_LINHA_RETA).setValue(Math.round(linhaReta * 10) / 10);
-    planilha.getRange(linha, COL_TEMPO_ESTIMADO).setValue(formatarTempo(resultado.duracaoSeg));
-    planilha.getRange(linha, COL_SUBIDA).setValue(resultado.subidaM != null ? Math.round(resultado.subidaM) : 'não disponível');
-    planilha.getRange(linha, COL_DESCIDA).setValue(resultado.descidaM != null ? Math.round(resultado.descidaM) : 'não disponível');
-    planilha.getRange(linha, COL_STATUS).setValue('OK' + avisoFora + avisoRazao);
-
-    // Respeita o limite de requisições por minuto do plano gratuito do ORS.
-    Utilities.sleep(1500);
+    infoLinhas.push({
+      linha: linha,
+      rotaLabel: rotaLabel,
+      origemLat: origemLat,
+      origemLon: origemLon,
+      destinoLat: destinoLat,
+      destinoLon: destinoLon
+    });
   }
 
-  // Agora que sabemos todos os destinos de cada grupo, gera um único link de
-  // mapa por grupo (origem + todos os destinos) e grava na coluna "Ver no
-  // Mapa" de cada linha que pertence a esse grupo.
-  grupos.forEach(function(grupo) {
-    if (grupo.membros.length === 0) return;
-    var destinos = grupo.membros.map(function(m) {
-      return { lat: m.destinoLat, lon: m.destinoLon };
+  // --- Passo 2: agrupar pelo texto da coluna "Rota" ---
+  // Linhas sem rótulo viram cada uma seu próprio grupo (não são agrupadas
+  // entre si, para não misturar rotas que o usuário não identificou).
+  var gruposPorChave = {};
+  var ordemChaves = [];
+
+  infoLinhas.forEach(function(info) {
+    var chave = info.rotaLabel !== '' ? ('rota:' + info.rotaLabel) : ('linha:' + info.linha);
+    if (!gruposPorChave[chave]) {
+      gruposPorChave[chave] = [];
+      ordemChaves.push(chave);
+    }
+    gruposPorChave[chave].push(info);
+  });
+
+  // --- Passo 3: calcular cada grupo ---
+  ordemChaves.forEach(function(chaveGrupo) {
+    var linhasDoGrupo = gruposPorChave[chaveGrupo];
+
+    // Todas as origens preenchidas/resolvidas no grupo precisam ser a mesma.
+    var origensDoGrupo = linhasDoGrupo
+      .filter(function(info) { return !isNaN(info.origemLat) && !isNaN(info.origemLon); })
+      .map(function(info) { return info.origemLat.toFixed(6) + ',' + info.origemLon.toFixed(6); });
+    var origensUnicas = origensDoGrupo.filter(function(v, i, arr) { return arr.indexOf(v) === i; });
+
+    if (origensUnicas.length > 1) {
+      linhasDoGrupo.forEach(function(info) {
+        planilha.getRange(info.linha, COL_STATUS).setValue('Erro: a rota não pode ter mais de uma origem');
+        planilha.getRange(info.linha, COL_MAPA).setValue('');
+      });
+      return;
+    }
+
+    var origemGrupo = null;
+    var membrosMapa = [];
+
+    linhasDoGrupo.forEach(function(info) {
+      var linha = info.linha, origemLat = info.origemLat, origemLon = info.origemLon,
+        destinoLat = info.destinoLat, destinoLon = info.destinoLon;
+
+      if (isNaN(destinoLat) || isNaN(destinoLon)) {
+        return; // linha em branco — ignora
+      }
+
+      if (isNaN(origemLat) || isNaN(origemLon)) {
+        planilha.getRange(linha, COL_STATUS).setValue('Erro: nenhuma origem informada (preencha a origem nesta linha ou em uma linha anterior)');
+        return;
+      }
+
+      if (!coordenadaValida(origemLat, origemLon) || !coordenadaValida(destinoLat, destinoLon)) {
+        planilha.getRange(linha, COL_STATUS).setValue('Erro: latitude/longitude fora do intervalo permitido (lat -90..90, lon -180..180)');
+        return;
+      }
+
+      origemGrupo = { lat: origemLat, lon: origemLon };
+      membrosMapa.push({ linha: linha, destinoLat: destinoLat, destinoLon: destinoLon });
+
+      var statusAtual = planilha.getRange(linha, COL_STATUS).getValue();
+      if (statusAtual === 'OK') {
+        return; // já calculado antes — evita gastar a cota gratuita de novo
+      }
+
+      var avisoFora = '';
+      if (!dentroDoBrasil(origemLat, origemLon) || !dentroDoBrasil(destinoLat, destinoLon)) {
+        avisoFora = ' — aviso: coordenada fora do Brasil, confira se lat/lon não foram invertidas';
+      }
+
+      var linhaReta = distanciaLinhaRetaKm(origemLat, origemLon, destinoLat, destinoLon);
+      var resultado = consultarRota(chave, origemLat, origemLon, destinoLat, destinoLon);
+
+      if (resultado.erro) {
+        planilha.getRange(linha, COL_STATUS).setValue('Erro: ' + resultado.erro);
+        return;
+      }
+
+      var razao = linhaReta > 0 ? resultado.distanciaKm / linhaReta : 0;
+      var avisoRazao = razao > 3 ? ' — aviso: rota muito maior que linha reta, revise as coordenadas' : '';
+
+      planilha.getRange(linha, COL_DISTANCIA_ROTA).setValue(Math.round(resultado.distanciaKm * 10) / 10);
+      planilha.getRange(linha, COL_DISTANCIA_LINHA_RETA).setValue(Math.round(linhaReta * 10) / 10);
+      planilha.getRange(linha, COL_TEMPO_ESTIMADO).setValue(formatarTempo(resultado.duracaoSeg));
+      planilha.getRange(linha, COL_SUBIDA).setValue(resultado.subidaM != null ? Math.round(resultado.subidaM) : 'não disponível');
+      planilha.getRange(linha, COL_DESCIDA).setValue(resultado.descidaM != null ? Math.round(resultado.descidaM) : 'não disponível');
+      planilha.getRange(linha, COL_STATUS).setValue('OK' + avisoFora + avisoRazao);
+
+      // Respeita o limite de requisições por minuto do plano gratuito do ORS.
+      Utilities.sleep(1500);
     });
-    var link = linkGoogleMapsMultiplo(grupo.origemLat, grupo.origemLon, destinos);
-    grupo.membros.forEach(function(m) {
-      planilha.getRange(m.linha, COL_MAPA).setValue(link);
-    });
+
+    if (origemGrupo && membrosMapa.length > 0) {
+      var destinos = membrosMapa.map(function(m) {
+        return { lat: m.destinoLat, lon: m.destinoLon };
+      });
+      var link = linkGoogleMapsMultiplo(origemGrupo.lat, origemGrupo.lon, destinos);
+      membrosMapa.forEach(function(m) {
+        planilha.getRange(m.linha, COL_MAPA).setValue(link);
+      });
+    }
   });
 
   SpreadsheetApp.getUi().alert('Cálculo concluído.');

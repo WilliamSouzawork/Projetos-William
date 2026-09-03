@@ -13,30 +13,35 @@ Nada para instalar. Tudo roda dentro do Google Sheets, no navegador.
    |---|---|---|---|---|---|---|---|---|---|---|---|
    | Rota | Origem Lat | Origem Lon | Destino Lat | Destino Lon | Distância Rota (km) | Distância Linha Reta (km) | Tempo Estimado | Subida (m) | Descida (m) | Status | Ver no Mapa |
 
-4. Nas linhas seguintes (2, 3, 4...), preencha as coordenadas de origem e destino que você quer calcular. A coluna **Rota** é livre — só uma etiqueta para você identificar cada grupo (ex.: "Rota 1", "Rota 2"), não influencia o cálculo.
+4. Nas linhas seguintes (2, 3, 4...), preencha as coordenadas de origem e destino que você quer calcular. A coluna **Rota** é o que define o agrupamento: todas as linhas com o mesmo texto nessa coluna (ex.: "Rota 1") são tratadas como a mesma rota.
 
-### Uma origem, vários destinos — e várias "rotas" separadas
+### Uma origem, vários destinos — agrupados pela coluna "Rota"
 
-Você **não precisa repetir a origem em toda linha**. Preencha a origem só na
-primeira linha de cada grupo e deixe as células de origem em branco nas
-linhas seguintes — o script reaproveita automaticamente a última origem
-preenchida acima. Isso vale também para o que você chamou de "Rota 1",
-"Rota 2": cada uma é só um novo grupo, que começa quando você preenche uma
-origem nova. Exemplo com dois grupos:
+Todas as linhas que tiverem **o mesmo texto na coluna Rota** são agrupadas.
+Você pode repetir a origem em toda linha do grupo (mais simples de digitar
+numa planilha) **ou** preencher só na primeira linha e deixar em branco nas
+seguintes — o script reaproveita a última origem preenchida. Os dois jeitos
+funcionam. Exemplo com dois grupos:
 
    | Rota | Origem Lat | Origem Lon | Destino Lat | Destino Lon |
    |---|---|---|---|---|
    | Rota 1 | -19,8449028 | -44,0754105 | -19,9000000 | -44,1000000 |
-   | Rota 1 |  |  | -20,0000000 | -44,2000000 |
+   | Rota 1 | -19,8449028 | -44,0754105 | -20,0000000 | -44,2000000 |
    | Rota 2 | -22,9068 | -43,1729 | -23,5505 | -46,6333 |
    | Rota 2 |  |  | -22,0000 | -43,5000 |
 
 Isso calcula, para cada grupo, a distância de **cada destino separadamente a
 partir da mesma origem** (A→B, A→C) — não é a rota que passa por todos em
-sequência (essa é outra funcionalidade, para uma fase futura). A "Rota 2"
-troca de origem porque a linha 4 tem uma origem nova preenchida; a partir
-dali, as linhas seguintes reaproveitam essa nova origem, até você trocar de
-novo.
+sequência (essa é outra funcionalidade, para uma fase futura).
+
+**Importante:** dentro de um mesmo grupo (mesmo texto na coluna Rota), todas
+as linhas precisam ter a mesma origem. Se você preencher origens diferentes
+com a mesma etiqueta de rota — por exemplo, por engano — o script marca
+`Erro: a rota não pode ter mais de uma origem` em todas as linhas daquele
+grupo, e não calcula nem gera o link do mapa até você corrigir.
+
+Linhas sem nada na coluna Rota continuam funcionando, mas cada uma vira um
+grupo individual (não são agrupadas com outras linhas em branco).
 
 ### 2. Cole o código do sistema
 1. No menu da planilha, clique em **Extensões** → **Apps Script**. Vai abrir uma nova aba.
