@@ -13,11 +13,26 @@ Nada para instalar. Tudo roda dentro do Google Sheets, no navegador.
    |---|---|---|---|---|---|---|---|
    | Origem Lat | Origem Lon | Destino Lat | Destino Lon | Distância Rota (km) | Distância Linha Reta (km) | Tempo Estimado | Status |
 
-4. Nas linhas seguintes (2, 3, 4...), preencha as coordenadas de origem e destino que você quer calcular. Exemplo:
+4. Nas linhas seguintes (2, 3, 4...), preencha as coordenadas de origem e destino que você quer calcular.
+
+### Uma origem, vários destinos
+
+Você **não precisa repetir a origem em toda linha**. Preencha a origem só na
+primeira linha do grupo e deixe as células de origem em branco nas linhas
+seguintes — o script reaproveita automaticamente a última origem preenchida
+acima. Exemplo:
 
    | Origem Lat | Origem Lon | Destino Lat | Destino Lon |
    |---|---|---|---|
    | -19,8449028 | -44,0754105 | -19,9000000 | -44,1000000 |
+   |  |  | -20,0000000 | -44,2000000 |
+   |  |  | -19,7000000 | -44,3000000 |
+
+Isso calcula a distância de **cada destino separadamente a partir da mesma
+origem** (A→B, A→C, A→D) — não é a rota que passa por todos em sequência.
+Se quiser trocar de origem no meio da planilha, é só preencher a origem de
+novo na linha onde ela muda; as linhas depois dela passam a usar a nova
+origem, até você trocar outra vez.
 
 ### 2. Cole o código do sistema
 1. No menu da planilha, clique em **Extensões** → **Apps Script**. Vai abrir uma nova aba.

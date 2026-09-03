@@ -51,19 +51,52 @@ function calcularTodasAsLinhas() {
   var planilha = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var ultimaLinha = planilha.getLastRow();
 
+  // Guarda a última origem preenchida, para permitir "uma origem, vários
+  // destinos": basta deixar as células de origem em branco nas linhas
+  // seguintes que elas reaproveitam a origem informada na linha anterior.
+  var ultimaOrigemLat = NaN;
+  var ultimaOrigemLon = NaN;
+
   for (var linha = 2; linha <= ultimaLinha; linha++) {
     var statusAtual = planilha.getRange(linha, COL_STATUS).getValue();
     if (statusAtual === 'OK') {
+      // Ainda assim atualiza a "última origem" para as linhas seguintes,
+      // caso essa linha tenha uma origem preenchida.
+      var olat = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LAT).getValue());
+      var olon = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LON).getValue());
+      if (!isNaN(olat) && !isNaN(olon)) {
+        ultimaOrigemLat = olat;
+        ultimaOrigemLon = olon;
+      }
       continue; // já calculado antes — evita gastar a cota gratuita de novo
     }
 
-    var origemLat = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LAT).getValue());
-    var origemLon = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LON).getValue());
+    var origemLatCelula = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LAT).getValue());
+    var origemLonCelula = parseCoordenada(planilha.getRange(linha, COL_ORIGEM_LON).getValue());
+
+    var origemLat, origemLon;
+    if (!isNaN(origemLatCelula) && !isNaN(origemLonCelula)) {
+      // Origem preenchida nesta linha: passa a valer para esta e as próximas.
+      origemLat = origemLatCelula;
+      origemLon = origemLonCelula;
+      ultimaOrigemLat = origemLat;
+      ultimaOrigemLon = origemLon;
+    } else {
+      // Origem em branco: reaproveita a última origem preenchida acima.
+      origemLat = ultimaOrigemLat;
+      origemLon = ultimaOrigemLon;
+    }
+
     var destinoLat = parseCoordenada(planilha.getRange(linha, COL_DESTINO_LAT).getValue());
     var destinoLon = parseCoordenada(planilha.getRange(linha, COL_DESTINO_LON).getValue());
 
-    if (isNaN(origemLat) || isNaN(origemLon) || isNaN(destinoLat) || isNaN(destinoLon)) {
-      planilha.getRange(linha, COL_STATUS).setValue('Erro: coordenada vazia ou inválida');
+    if (isNaN(destinoLat) || isNaN(destinoLon)) {
+      // Linha sem destino preenchido — ignora silenciosamente (pode ser linha em branco no fim da planilha).
+      continue;
+    }
+
+    if (isNaN(origemLat) || isNaN(origemLon)) {
+      planilha.getRange(linha, COL_STATUS).setValue('Erro: nenhuma origem informada (preencha a origem nesta linha ou em uma linha anterior)');
       continue;
     }
 
